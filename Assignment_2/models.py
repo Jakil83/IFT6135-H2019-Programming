@@ -151,7 +151,8 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
         embedding = self.i2e(inputs[t,:])
         #e_to_h = self.e2h(embedding)
 
-        previous_h = embedding
+        previous_h = self.dropout(embedding)
+
         for i in range(self.num_layers):
             # a(t)= b + W h(t−1)+ Ux(t)
             h2h = self.h2h[i](previous_h) # Ux(t)
@@ -161,15 +162,16 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
             next_h = h2h + h2h_next
 
             # h(t)= tanh(a(t))
-            next_hidden.append(self.tanh(next_h))
+            h_t = self.tanh(next_h)
+            next_hidden.append(h_t)
 
             #output of this layer is input of next layer
-            previous_h = next_hidden[i]
+            previous_h = self.dropout(h_t)
 
         output_arr.append(self.h2o(previous_h))
     output = torch.cat(output_arr, dim = 0)
-    logits = output.view(self.seq_len, self.batch_size, self.vocab_size), hidden
-    return output, next_hidden 
+    logits = output.view(self.seq_len, self.batch_size, self.vocab_size)
+    return logits, next_hidden 
 
     # TODO ========================
     # Compute the forward pass, using nested python for loops.
