@@ -40,7 +40,7 @@ class GRUCell(nn.Module):
         self.Uh = nn.Linear(self.hidden_size, self.hidden_size, bias=True)
 
     def forward(self, x, activation):
-        x = self._dropout(x)
+        x = self.dropout(x)
         reset_gate = torch.sigmoid(self.Wr(x) + self.Ur(activation))
         update_gate = torch.sigmoid(self.Wz(x) + self.Uz(activation))
         candidate = torch.tanh(self.Wh(x) + self.Uh(reset_gate * activation))
