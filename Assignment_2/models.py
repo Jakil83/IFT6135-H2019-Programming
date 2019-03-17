@@ -88,7 +88,7 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.e2h = nn.Linear(self.emb_size, hidden_size, bias=False)  
 
     # a(t)= b + W h(t−1)+ Ux(t)
-    self.layer = nn.Linear(hidden_size, hidden_size, bias=False)
+    self.layer = nn.Linear(hidden_size, hidden_size, bias=True)
     self.h2h = nn.ModuleList([self.e2h]+[copy.deepcopy(self.layer) for _ in range(num_layers-1)])#clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers)# Ux(t)
     self.h2h_next = clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers) # b + W h(t−1)
 
@@ -208,7 +208,7 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
               if you are curious.
                     shape: (num_layers, batch_size, hidden_size)
     """
-    return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
+    #return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
   def generate(self, input, hidden, generated_seq_len):
     # TODO ========================
@@ -248,20 +248,121 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
   def __init__(self, emb_size, hidden_size, seq_len, batch_size, vocab_size, num_layers, dp_keep_prob):
     super(GRU, self).__init__()
 
-    # TODO ========================
+    self.emb_size = emb_size  #input size
+    self.hidden_size = hidden_size
+    self.seq_len = seq_len
+    self.vocab_size = vocab_size
+    self.batch_size = batch_size
+    self.num_layers = num_layers
+    self.dp_keep_prob = dp_keep_prob
 
-  def init_weights_uniform(self):
-    # TODO ========================
-    pass
+    self.embedding = WordEmbedding(self.emb_size, vocab_size)
+    self.i2e = self.embedding
+    #convert embedding to hidden size for input to recurrent layer
+    self.e2h = nn.Linear(self.emb_size, hidden_size, bias=False)  
+
+   # a(t)= b + W h(t−1)+ Ux(t)
+    self.layer = nn.Linear(hidden_size, hidden_size, bias=True)
+
+    # r_t
+    self.h2h_r = nn.ModuleList([self.e2h]+[copy.deepcopy(self.layer) for _ in range(num_layers-1)]) # Ux(t)
+    self.h2h_next_r = clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers) # b + W h(t−1)
+
+    # z_t
+    self.h2h_z = nn.ModuleList([self.e2h]+[copy.deepcopy(self.layer) for _ in range(num_layers-1)]) # Ux(t)
+    self.h2h_next_z = clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers) # b + W h(t−1)
+
+    # h_tilda_t
+    self.h2h_h_tilda = nn.ModuleList([self.e2h]+[copy.deepcopy(self.layer) for _ in range(num_layers-1)]) # Ux(t)
+    self.h2h_next_h_tilda = clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers) # b + W h(t−1)
+
+
+    # h(t)= tanh(a(t))
+    self.tanh = nn.Tanh()
+    self.sigmoid = nn.Sigmoid()
+    self.dropout = nn.Dropout(1 - dp_keep_prob)
+
+    # o(t)= c + V h(t)
+    self.h2o = nn.Linear(hidden_size, vocab_size, bias=True)
+  
+    # m == self.h2o errors out if you call this before assigning self.h2o
+    self.init_weights_uniform(self.e2h)
+    self.init_weights_uniform(self.h2o)
+    self.h2h_r.apply(self.init_weights_uniform)
+    self.h2h_next_r.apply(self.init_weights_uniform)
+    self.h2h_z.apply(self.init_weights_uniform)
+    self.h2h_next_z.apply(self.init_weights_uniform)
+    self.h2h_h_tilda.apply(self.init_weights_uniform)
+    self.h2h_next_h_tilda.apply(self.init_weights_uniform)
+ 
+  def init_weights_uniform(self,m):
+    if isinstance(m, nn.Linear):
+        if m == self.h2o:
+            m.weight.data.uniform_(-0.1, 0.1)
+            m.bias.data.fill_(0)
+            #print(m, m.weight.data,  m.bias.data)
+            
+        elif m.bias is not None:
+            k=1/np.sqrt(self.hidden_size)
+            m.weight.data.uniform_(-k, k)
+            m.bias.data.uniform_(-k, k)
+            #print(m, m.weight.data,  m.bias.data)
+        elif m.bias is None: #this will be true for the embedding layer
+            m.weight.data.uniform_(-0.1, 0.1)
+            #print(m, m.weight.data)
 
   def init_hidden(self):
     # TODO ========================
     #return # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
-    pass
+    return  Variable(torch.zeros(self.num_layers, self.batch_size, self.hidden_size))
+
   def forward(self, inputs, hidden):
     # TODO ========================
     # return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
-    pass
+    
+    output_arr = []
+    next_hidden = []
+
+    for t in range(self.seq_len):
+        embedding = self.i2e(inputs[t,:])
+        #e_to_h = self.e2h(embedding)
+
+        previous_h = self.dropout(embedding)
+
+        for i in range(self.num_layers):
+
+            # r_t = sigmoid(W_r x_t + U_r h(t-1) + b_r)
+            h2h_r = self.h2h_r[i](previous_h) # W_r x(t)
+            h2h_next_r = self.h2h_next_r[i](hidden[i]) # b_r + U_r h(t−1)
+            r_t = self.sigmoid(h2h_r + h2h_next_r)
+
+            # z_t = sigmoid(W_z x_t + U_z h(t-1) + b_z)
+            h2h_z = self.h2h_z[i](previous_h) # W_z x(t)
+            h2h_next_z = self.h2h_next_z[i](hidden[i]) # b_z + U_z h(t−1)
+            z_t = self.sigmoid(h2h_z + h2h_next_z)
+
+
+            # h_tilda_t = sigmoid(W_h_tilda x_t + U_h_tilda (r_t * h(t-1)) + b_h_tilda)  # * is element wise multiplication
+            h2h_h_tilda = self.h2h_h_tilda[i](previous_h) # W_h_tilda x(t)
+            h2h_next_h_tilda = self.h2h_next_h_tilda[i](r_t * hidden[i]) # b_h_tilda + U_h_tilda (r_t * h(t-1))
+            h_tilda_t = self.sigmoid(h2h_h_tilda + h2h_next_h_tilda)
+
+
+            # h_t = (1 - z_t) * h(t-1) + z_t * h_tilda_t
+            h_t = (1.0 - z_t) * hidden[i] + z_t * h_tilda_t
+
+            # updating hidden
+            next_hidden.append(h_t)
+            # output of this layer is input of next layer
+            previous_h = self.dropout(h_t)
+
+        output_arr.append(self.h2o(previous_h))
+    output = torch.cat(output_arr, dim = 0)
+    logits = output.view(self.seq_len, self.batch_size, self.vocab_size)
+    return logits, next_hidden 
+
+
+
   def generate(self, input, hidden, generated_seq_len):
     # TODO ========================
     #return samples
