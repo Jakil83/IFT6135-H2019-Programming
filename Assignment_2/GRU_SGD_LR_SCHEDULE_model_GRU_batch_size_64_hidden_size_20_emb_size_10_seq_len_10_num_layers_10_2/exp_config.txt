@@ -1,0 +1,17 @@
+batch_size    64
+code_file    ptb-lm.py
+data    data
+debug    False
+dp_keep_prob    0.35
+emb_size    10
+evaluate    False
+hidden_size    20
+initial_lr    20.0
+model    GRU
+num_epochs    40
+num_layers    10
+optimizer    SGD_LR_SCHEDULE
+save_best    False
+save_dir    GRU_SGD_LR_SCHEDULE_model_GRU_batch_size_64_hidden_size_20_emb_size_10_seq_len_10_num_layers_10_2
+seed    1111
+seq_len    10
