@@ -1,2 +1,4 @@
 
 \.idea/
+Assignment_2/GRU_SGD_LR_SCHEDULE_model_GRU_batch_size_64_hidden_size_20_emb_size_10_seq_len_10_num_layers_10_0/exp_config.txt
+Assignment_2/GRU_SGD_LR_SCHEDULE_model_GRU_batch_size_64_hidden_size_20_emb_size_10_seq_len_10_num_layers_10_0/learning_curves.npy
