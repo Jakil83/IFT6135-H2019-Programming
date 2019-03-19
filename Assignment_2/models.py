@@ -114,32 +114,18 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     # and output biases to 0 (in place). The embeddings should not use a bias vector.
     # Initialize all other (i.e. recurrent and linear) weights AND biases uniformly 
     # in the range [-k, k] where k is the square root of 1/hidden_size
-    
-    #self.h2o.weight.data.uniform_(-0.1, 0.1)
-    #self.h2o.bias.data.fill_(0)
 
-    #self.e2h.weight.data.uniform_(-0.1, 0.1)
-    #k=1/np.sqrt(self.hidden_size)
-    #self.h2h.weight.data.uniform_(-k, k)
-    
-    #self.h2h_next.weight.data.uniform_(-k, k)
-    #self.h2h_next.bias.data.uniform_(-k, k)
+    k = 1.0 / math.sqrt(self.hidden_size)
 
-    if isinstance(m, nn.Linear):
-            #print("weights = ",m)
-            if m == self.h2o:
-                m.weight.data.uniform_(-0.1, 0.1)
-                m.bias.data.fill_(0)
-                #print(m, m.weight.data,  m.bias.data)
-                
-            elif m.bias is not None:
-                k=1/np.sqrt(self.hidden_size)
-                m.weight.data.uniform_(-k, k)
-                m.bias.data.uniform_(-k, k)
- #               #print(m, m.weight.data,  m.bias.data)
-            elif m.bias is None: #this will be true for the embedding layer
-                m.weight.data.uniform_(-0.1, 0.1)
-                #print(m, m.weight.data)
+    self.embedding.weight.data.uniform_(-0.1, 0.1)
+
+    for i in range(self.num_layers):
+        self.input_to_hidden[i].weight.data.uniform_(-k, k)
+        self.previous_to_hidden[i].weight.data.uniform_(-k, k)
+        self.previous_to_hidden[i].bias.data.uniform_(-k, k)
+
+    self.output.bias.data.fill_(0.0)
+    self.output.weight.data.uniform_(-0.1, 0.1)
 
   def init_hidden(self):
     # TODO 

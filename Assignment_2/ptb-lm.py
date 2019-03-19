@@ -236,7 +236,7 @@ def ptb_raw_data(data_path=None, prefix="ptb"):
 def ptb_iterator(raw_data, batch_size, num_steps):
     raw_data = np.array(raw_data, dtype=np.int32)
 
-    data_len = int(len(raw_data)/100)
+    data_len = len(raw_data)
     batch_len = data_len // batch_size
     data = np.zeros([batch_size, batch_len], dtype=np.int32)
     for i in range(batch_size):
