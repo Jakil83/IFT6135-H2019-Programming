@@ -88,7 +88,7 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.e2h = nn.Linear(self.emb_size, hidden_size, bias=False)  
 
     # a(t)= b + W h(t−1)+ Ux(t)
-    self.layer = nn.Linear(hidden_size, hidden_size, bias=True)
+    self.h2h = nn.Linear(hidden_size, hidden_size, bias=True)
     self.h2h = nn.ModuleList([self.e2h]+[copy.deepcopy(self.layer) for _ in range(num_layers-1)])#clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers)# Ux(t)
     self.h2h_next = clones(nn.Linear(hidden_size, hidden_size, bias=False), num_layers) # b + W h(t−1)
 
@@ -117,15 +117,15 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
 
     k = 1.0 / math.sqrt(self.hidden_size)
 
-    self.embedding.weight.data.uniform_(-0.1, 0.1)
+    self.i2e.weight.data.uniform_(-0.1, 0.1)
 
     for i in range(self.num_layers):
-        self.input_to_hidden[i].weight.data.uniform_(-k, k)
-        self.previous_to_hidden[i].weight.data.uniform_(-k, k)
-        self.previous_to_hidden[i].bias.data.uniform_(-k, k)
+        self.e2h[i].weight.data.uniform_(-k, k)
+        self.h2h[i].weight.data.uniform_(-k, k)
+        self.h2h[i].bias.data.uniform_(-k, k)
 
-    self.output.bias.data.fill_(0.0)
-    self.output.weight.data.uniform_(-0.1, 0.1)
+    self.h2o.bias.data.fill_(0.0)
+    self.h2o.weight.data.uniform_(-0.1, 0.1)
 
   def init_hidden(self):
     # TODO 
