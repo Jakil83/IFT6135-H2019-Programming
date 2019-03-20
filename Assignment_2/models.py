@@ -229,6 +229,31 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
                     shape: (generated_seq_len, batch_size)
     """
 
+    samples = []
+    for i in range(generated_seq_len):
+        embedding = self.i2e(input)
+        #e_to_h = self.e2h(embedding)
+
+        previous_h = self.dropout(embedding)
+
+        for i in range(self.num_layers):
+            # a(t)= b + W h(t−1)+ Ux(t)
+            h2h = self.h2h[i](previous_h) # Ux(t)
+
+            h2h_next = self.h2h_next[i](hidden[i]) # b + W h(t−1)
+
+            next_h = h2h + h2h_next
+
+            # h(t)= tanh(a(t))
+            h_t = self.tanh(next_h)
+
+            #output of this layer is input of next layer in the forward pass
+            previous_h = self.dropout(h_t)
+
+        output = self.h2o(previous_h)
+        samples.append(output)
+        input = output
+
     return samples
 
 
@@ -362,8 +387,42 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
 
   def generate(self, input, hidden, generated_seq_len):
     # TODO ========================
-    #return samples
-    pass
+    samples = []
+    for i in range(generated_seq_len):
+        embedding = self.i2e(input)
+        #e_to_h = self.e2h(embedding)
+
+        previous_h = self.dropout(embedding)
+
+        for i in range(self.num_layers):
+
+            # r_t = sigmoid(W_r x_t + U_r h(t-1) + b_r)
+            h2h_r = self.h2h_r[i](previous_h) # W_r x(t)
+            h2h_next_r = self.h2h_next_r[i](hidden[i]) # b_r + U_r h(t−1)
+            r_t = self.sigmoid(h2h_r + h2h_next_r)
+
+            # z_t = sigmoid(W_z x_t + U_z h(t-1) + b_z)
+            h2h_z = self.h2h_z[i](previous_h) # W_z x(t)
+            h2h_next_z = self.h2h_next_z[i](hidden[i]) # b_z + U_z h(t−1)
+            z_t = self.sigmoid(h2h_z + h2h_next_z)
+
+
+            # h_tilda_t = sigmoid(W_h_tilda x_t + U_h_tilda (r_t * h(t-1)) + b_h_tilda)  # * is element wise multiplication
+            h2h_h_tilda = self.h2h_h_tilda[i](previous_h) # W_h_tilda x(t)
+            h2h_next_h_tilda = self.h2h_next_h_tilda[i](r_t * hidden[i]) # b_h_tilda + U_h_tilda (r_t * h(t-1))
+            h_tilda_t = self.sigmoid(h2h_h_tilda + h2h_next_h_tilda)
+
+
+            # h_t = (1 - z_t) * h(t-1) + z_t * h_tilda_t
+            h_t = (1.0 - z_t) * hidden[i] + z_t * h_tilda_t
+            # output of this layer is input of next layer
+            previous_h = self.dropout(h_t)
+
+        output = self.softmax(self.h2o(previous_h))
+        samples.append(output)
+        input = output
+
+    return samples
 
 
 # Problem 3
