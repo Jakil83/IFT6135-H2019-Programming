@@ -83,15 +83,15 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.dp_keep_prob = dp_keep_prob
 
     self.embedding = WordEmbedding(self.emb_size, vocab_size)
-    self.i2e = self.embedding
+
     #convert embedding to hidden size for input to recurrent layer
     self.e2h = nn.Linear(self.emb_size, hidden_size, bias=False)
 
     # a(t)= b + W h(t−1)+ Ux(t)
     self.layer = nn.Linear(hidden_size, hidden_size, bias=False)
-    self.h2h = nn.ModuleList([self.e2h]+[copy.deepcopy(self.layer) for _ in range(num_layers-1)])#clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers)# Ux(t)
-    self.h2h_next = clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers) # b + W h(t−1)
 
+    self.h2h = nn.ModuleList([self.e2h]+[copy.deepcopy(self.layer) for _ in range(num_layers-1)]) # Ux(t)
+    self.h2h_next = clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers) # b + W h(t−1)
     # h(t)= tanh(a(t))
     self.tanh = nn.Tanh()
     self.dropout = nn.Dropout(1 - dp_keep_prob)
@@ -111,11 +111,13 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
 
     k = 1.0 / math.sqrt(self.hidden_size)
 
-    self.i2e.weight.data.uniform_(-0.1, 0.1)
+    self.embedding.lut.weight.data.uniform_(-0.1, 0.1)
 
     for i in range(self.num_layers):
         self.h2h[i].weight.data.uniform_(-k, k)
-        self.h2h[i].bias.data.uniform_(-k, k)
+
+        self.h2h_next[i].weight.data.uniform_(-k, k)
+        self.h2h_next[i].bias.data.uniform_(-k, k)
 
     self.h2o.bias.data.fill_(0.0)
     self.h2o.weight.data.uniform_(-0.1, 0.1)
@@ -137,7 +139,7 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     next_hidden = []
 
     for t in range(self.seq_len):
-        embedding = self.i2e(inputs[t,:])
+        embedding = self.embedding(inputs[t,:])
         #e_to_h = self.e2h(embedding)
 
         previous_h = self.dropout(embedding)
@@ -250,7 +252,7 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     self.dp_keep_prob = dp_keep_prob
 
     self.embedding = WordEmbedding(self.emb_size, vocab_size)
-    self.i2e = self.embedding
+    self.embedding = self.embedding
     #convert embedding to hidden size for input to recurrent layer
     self.e2h = nn.Linear(self.emb_size, hidden_size, bias=False)
 
@@ -318,7 +320,7 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     next_hidden = []
 
     for t in range(self.seq_len):
-        embedding = self.i2e(inputs[t,:])
+        embedding = self.embedding(inputs[t,:])
         #e_to_h = self.e2h(embedding)
 
         previous_h = self.dropout(embedding)
