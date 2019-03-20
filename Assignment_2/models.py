@@ -88,7 +88,7 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.e2h = nn.Linear(self.emb_size, hidden_size, bias=False)  
 
     # a(t)= b + W h(t−1)+ Ux(t)
-    self.h2h = nn.Linear(hidden_size, hidden_size, bias=True)
+    self.layer = nn.Linear(hidden_size, hidden_size, bias=True)
     self.h2h = nn.ModuleList([self.e2h]+[copy.deepcopy(self.layer) for _ in range(num_layers-1)])#clones(nn.Linear(hidden_size, hidden_size, bias=True), num_layers)# Ux(t)
     self.h2h_next = clones(nn.Linear(hidden_size, hidden_size, bias=False), num_layers) # b + W h(t−1)
 
