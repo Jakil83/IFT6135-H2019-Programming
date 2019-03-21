@@ -506,15 +506,23 @@ class MultiHeadedAttention(nn.Module):
         self.n_units = n_units
         self.n_heads = n_heads
 
-        self.linears = clones(nn.Linear(n_units, n_units), 3)
+        self.linears = clones(nn.Linear(n_units, n_units), 4)
         self.dropout = nn.Dropout(dropout)
-       
 
         # TODO: create/initialize any necessary parameters or layers
         # Initialize all weights and biases uniformly in the range [-k, k],
         # where k is the square root of 1/n_units.
         # Note: the only Pytorch modules you are allowed to use are nn.Linear
         # and nn.Dropout
+        self.init_weights()
+
+    def init_weights(self):
+
+        k = 1.0 / math.sqrt(self.n_units)
+        for i in range(4):
+            self.linears[i].weight.data.uniform_(-k, k)
+            self.linears[i].bias.data.uniform_(-k, k)
+
     def attentionHead(self, query, key, value, mask=None, dropout=None):
         d_k = self.d_k
         scores =  torch.matmul(query,key.transpose(-2, -1))/math.sqrt(d_k) 
@@ -522,6 +530,8 @@ class MultiHeadedAttention(nn.Module):
             mask = mask.unsqueeze(1)
             scores = scores.masked_fill_(mask == 0, 0)
         attention = F.softmax(scores, dim=-1) #Shouldn't it be over the number of heads
+        if dropout is not None:
+            attention = dropout(attention)
         z = torch.matmul(attention, value)  
         return z
 
@@ -548,7 +558,7 @@ class MultiHeadedAttention(nn.Module):
         #      for l, x in zip(self.linears, (query, key, value))]
         
         Z_heads = self.attentionHead(query, key, value, mask, dropout=self.dropout)
-        Z_heads = Z_heads.view(nbatches, -1, self.n_heads * self.d_k)
+        Z_heads = self.linears[3](Z_heads.view(nbatches, -1, self.n_heads * self.d_k))
         return Z_heads # size: (batch_size, seq_len, self.n_units)
 
 
