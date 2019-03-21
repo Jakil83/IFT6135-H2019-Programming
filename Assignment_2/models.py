@@ -281,7 +281,6 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     #convert embedding to hidden size for input to recurrent layer
     self.e2h = nn.Linear(self.emb_size, hidden_size, bias=False)
 
-   # a(t)= b + W h(t−1)+ Ux(t)
     self.layer = nn.Linear(hidden_size, hidden_size, bias=False)
 
     # r_t
@@ -489,6 +488,8 @@ and a linear layer followed by a softmax.
 #----------------------------------------------------------------------------------
 
 # TODO: implement this class
+
+
 class MultiHeadedAttention(nn.Module):
     def __init__(self, n_heads, n_units, dropout=0.1):
         """
@@ -503,12 +504,26 @@ class MultiHeadedAttention(nn.Module):
         # This requires the number of n_heads to evenly divide n_units.
         assert n_units % n_heads == 0
         self.n_units = n_units
+        self.n_heads = n_heads
+
+        self.linears = clones(nn.Linear(n_units, n_units), 3)
+        self.dropout = nn.Dropout(dropout)
+       
 
         # TODO: create/initialize any necessary parameters or layers
         # Initialize all weights and biases uniformly in the range [-k, k],
         # where k is the square root of 1/n_units.
         # Note: the only Pytorch modules you are allowed to use are nn.Linear
         # and nn.Dropout
+    def attentionHead(self, query, key, value, mask=None, dropout=None):
+        d_k = self.d_k
+        scores =  torch.matmul(query,key.transpose(-2, -1))/math.sqrt(d_k) 
+        if mask is not None:
+            mask = mask.unsqueeze(1)
+            scores = scores.masked_fill_(mask == 0, 0)
+        attention = F.softmax(scores, dim=-1) #Shouldn't it be over the number of heads
+        z = torch.matmul(attention, value)  
+        return z
 
     def forward(self, query, key, value, mask=None):
         # TODO: implement the masked multi-head attention.
@@ -517,8 +532,25 @@ class MultiHeadedAttention(nn.Module):
         # As described in the .tex, apply input masking to the softmax
         # generating the "attention values" (i.e. A_i in the .tex)
         # Also apply dropout to the attention values.
+        
+        nbatches = query.size(0)
+      
+        query = self.linears[0](query)
+        key = self.linears[1](key)
+        value = self.linears[2](value)  
 
-        return # size: (batch_size, seq_len, self.n_units)
+        query = query.view(nbatches, -1, self.n_heads, self.d_k).transpose(1, 2)
+        key = key.view(nbatches, -1, self.n_heads, self.d_k).transpose(1, 2)
+        value = value.view(nbatches, -1, self.n_heads, self.d_k).transpose(1, 2)
+       
+        # query, key, value = \
+        #     [l(x).view(nbatches, -1, self., self.d_k).transpose(1, 2)
+        #      for l, x in zip(self.linears, (query, key, value))]
+        
+        Z_heads = self.attentionHead(query, key, value, mask, dropout=self.dropout)
+        Z_heads = Z_heads.view(nbatches, -1, self.n_heads * self.d_k)
+        return Z_heads # size: (batch_size, seq_len, self.n_units)
+
 
 
 

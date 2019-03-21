@@ -1,0 +1,6 @@
+epoch: 0	train ppl: 1385.92470605	val ppl: 1137.23426302	best val: 1137.23426302	time (s) spent in epoch: 278.37084221839905
+epoch: 1	train ppl: 1255.62135444	val ppl: 1019.7505393	best val: 1019.7505393	time (s) spent in epoch: 284.68927574157715
+epoch: 2	train ppl: 1212.00228443	val ppl: 900.592079328	best val: 900.592079328	time (s) spent in epoch: 244.4819369316101
+epoch: 3	train ppl: 1196.74810452	val ppl: 1062.88044307	best val: 900.592079328	time (s) spent in epoch: 2541.7896287441254
+epoch: 4	train ppl: 1234.72184024	val ppl: 914.083784844	best val: 900.592079328	time (s) spent in epoch: 747.2826948165894
+epoch: 5	train ppl: 1206.15391794	val ppl: 862.38416048	best val: 862.38416048	time (s) spent in epoch: 341.5552840232849
