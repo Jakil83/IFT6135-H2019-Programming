@@ -8,6 +8,7 @@ from torch.autograd import Variable
 import matplotlib.pyplot as plt
 
 
+
 # NOTE ==============================================
 #
 # Fill in code for every method which has a TODO
@@ -388,15 +389,13 @@ and a linear layer followed by a softmax.
 
 
 # ----------------------------------------------------------------------------------
-
-
 def masked_softmax(x, mask):
     if mask is not None:
         # reshape on heads
         mask = mask.unsqueeze(1).expand(-1, x.shape[1], -1, -1)
     x = x.masked_fill(mask == 0, -1e9)
 
-    return nn.Softmax(dim = -1)(x)
+    return nn.Softmax(dim=-1)(x)
 
 
 class MultiHeadedAttention(nn.Module):
@@ -414,18 +413,16 @@ class MultiHeadedAttention(nn.Module):
         assert n_units % n_heads == 0
         self.n_units = n_units
 
-        # TODO: create/initialize any necessary parameters or layers
         # Note: the only Pytorch modules you are allowed to use are nn.Linear
         # and nn.Dropout
 
         self.n_heads = n_heads
         self.dropout = nn.Dropout(dropout)
 
-        # bias is required as per last update of assignment
-        self.Wq = nn.Linear(self.n_units, self.n_units, bias=True)
-        self.Wk = nn.Linear(self.n_units, self.n_units, bias=True)
-        self.Wv = nn.Linear(self.n_units, self.n_units, bias=True)
-        self.Wo = nn.Linear(self.n_units, self.n_units, bias=True)
+        # Linear layers for Q, K, V and output
+
+        linear = nn.Linear(self.n_units, self.n_units)
+        self.Wq, self.Wk, self.Wv, self.Wo = clones(linear, 4)
 
         # Initialize all weights and biases uniformly in the range [-k, k],
         # where k is the square root of 1/n_units.
@@ -444,7 +441,7 @@ class MultiHeadedAttention(nn.Module):
         return Hi
 
     def forward(self, query, key, value, mask=None):
-        # TODO: implement the masked multi-head attention.
+
         # query, key, and value all have size: (batch_size, seq_len, self.n_units)
         # mask has size: (batch_size, seq_len, seq_len)
         # As described in the .tex, apply input masking to the softmax
@@ -469,25 +466,11 @@ class MultiHeadedAttention(nn.Module):
 
     def init_parameters(self):
 
-        k = np.sqrt(1 / self.n_units)
+        k = 1.0 / np.sqrt(self.n_units)
 
-        nn.init.uniform_(self.Wq.weight, a=-k, b=k)
-        if self.Wq.bias is not None:
-            nn.init.uniform_(self.Wq.bias, a=-k, b=k)
-
-        nn.init.uniform_(self.Wk.weight, a=-k, b=k)
-        if self.Wk.bias is not None:
-            nn.init.uniform_(self.Wk.bias, a=-k, b=k)
-
-        nn.init.uniform_(self.Wv.weight, a=-k, b=k)
-        if self.Wv.bias is not None:
-            nn.init.uniform_(self.Wv.bias, a=-k, b=k)
-
-        nn.init.uniform_(self.Wo.weight, a=-k, b=k)
-        if self.Wo.bias is not None:
-            nn.init.uniform_(self.Wo.bias, a=-k, b=k)
-
-
+        for layer in [self.Wq, self.Wk, self.Wv, self.Wo]:
+            layer.weight.data.uniform_(-k, k)
+            layer.bias.data.uniform_(-k, k)
 # ----------------------------------------------------------------------------------
 # The encodings of elements of the input sequence
 
