@@ -89,7 +89,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 import numpy
 np = numpy
-
+import matplotlib.pyplot as plt
 # NOTE ==============================================
 # This is where your models are imported
 from models import RNN, GRU 
@@ -421,7 +421,7 @@ def run_epoch(model, data, is_train=False, lr=1.0):
                 print('step: '+ str(step) + '\t' \
                     + "loss (sum over all examples' seen this epoch): "+ str(costs) + '\t' \
                     + 'speed (wps):' + str(iters * model.batch_size / (time.time() - start_time)))
-    print(losses.shape())                
+    print(losses.len)                
     return np.exp(costs / iters), losses
 
 
@@ -455,12 +455,22 @@ for epoch in range(num_epochs):
         lr = lr * lr_decay # decay lr if it is time
 
     # RUN MODEL ON TRAINING DATA
-    train_ppl, train_loss = run_epoch(model, train_data, True, lr)
+    #train_ppl, train_loss = run_epoch(model, train_data, True, lr)
 
     # RUN MODEL ON VALIDATION DATA
     val_ppl, val_loss = run_epoch(model, valid_data)
-    val_loss = val_loss/train_data.size()
-
+    
+    #Plot here#<--------------------
+    plt.plot(val_loss)
+    plt.xlabel('t')
+    plt.ylabel('L_t')
+    
+    plt.title('Average loss at each time step', fontsize=14)
+    
+    plt.legend(fontsize=11)
+    #plt.savefig(args.save_dir, '{}.jpq', bbox_inches='tight')
+    plt.show()
+    
     # SAVE MODEL IF IT'S THE BEST SO FAR
     if val_ppl < best_val_so_far:
         best_val_so_far = val_ppl
