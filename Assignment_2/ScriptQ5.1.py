@@ -1,3 +1,4 @@
+
 #!/bin/python
 # coding: utf-8
 
@@ -171,6 +172,9 @@ i = 0
 while os.path.exists(experiment_path + "_" + str(i)):
     i += 1
 experiment_path = experiment_path + "_" + str(i)
+
+
+#experiment_path = '/content/IFT6135-H2019-Programming/Assignment_2/experiments'
 
 # Creates an experimental directory and dumps all the args to a text file
 os.mkdir(experiment_path)
@@ -399,12 +403,14 @@ def run_epoch(model, data, is_train=False, lr=1.0):
         # For problem 5.3, you will (instead) need to compute the average loss 
         #at each time-step separately. 
         #loss = loss_fn(outputs.contiguous().view(-1, model.vocab_size), tt)
-
-        for i in range(model.seq_len):
-            loss = nn.CrossEntropyLoss(reduction = 'sum')(outputs.contiguous()[i,:], targets[i,:])
-            loss_per_step[i] += loss
-        #costs += loss.data.item()# <---------
-        #losses.append(loss_per_step)
+        if is_train:
+            loss = loss_fn(outputs.contiguous().view(-1, model.vocab_size), tt)
+            costs += loss.data.item()
+            losses.append(costs)
+        else:        
+            for i in range(model.seq_len):
+                loss = nn.CrossEntropyLoss(reduction = 'sum')(outputs.contiguous()[i,:], targets[i,:])
+                loss_per_step[i]= loss
         iters += model.seq_len
         if args.debug:
             print(step, loss)
@@ -421,9 +427,11 @@ def run_epoch(model, data, is_train=False, lr=1.0):
                 print('step: '+ str(step) + '\t' \
                     + "loss (sum over all examples' seen this epoch): "+ str(costs) + '\t' \
                     + 'speed (wps):' + str(iters * model.batch_size / (time.time() - start_time)))
-    print(count)                
-    return np.exp(costs / iters), loss_per_step/count
-
+    
+    if not is_train:         
+        return np.exp(costs / iters), loss_per_step/count
+    else:    
+        return np.exp(costs / iters), losses
 
 
 ###############################################################################
@@ -455,7 +463,7 @@ for epoch in range(num_epochs):
         lr = lr * lr_decay # decay lr if it is time
 
     # RUN MODEL ON TRAINING DATA
-    #train_ppl, train_loss = run_epoch(model, train_data, True, lr)
+    train_ppl, train_loss = run_epoch(model, train_data, True, lr)
 
     # RUN MODEL ON VALIDATION DATA
     val_ppl, val_loss = run_epoch(model, valid_data)
