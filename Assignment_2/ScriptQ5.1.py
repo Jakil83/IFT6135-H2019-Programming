@@ -402,9 +402,9 @@ def run_epoch(model, data, is_train=False, lr=1.0):
 
         for i in range(model.seq_len):
             loss = nn.CrossEntropyLoss(reduction = 'sum')(outputs.contiguous()[i,:], targets[i,:])
-            loss_per_step[i]= loss
+            loss_per_step[i] += loss
         #costs += loss.data.item()# <---------
-        losses.append(loss_per_step)
+        #losses.append(loss_per_step)
         iters += model.seq_len
         if args.debug:
             print(step, loss)
@@ -421,8 +421,8 @@ def run_epoch(model, data, is_train=False, lr=1.0):
                 print('step: '+ str(step) + '\t' \
                     + "loss (sum over all examples' seen this epoch): "+ str(costs) + '\t' \
                     + 'speed (wps):' + str(iters * model.batch_size / (time.time() - start_time)))
-    print(losses.len)                
-    return np.exp(costs / iters), losses
+    print(count)                
+    return np.exp(costs / iters), loss_per_step/count
 
 
 
