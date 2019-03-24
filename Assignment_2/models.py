@@ -34,11 +34,9 @@ import matplotlib.pyplot as plt
 def clones(module, N):
     """
     A helper function for producing N identical layers (each with their own parameters).
-
     inputs:
         module: a pytorch nn.module
         N (int): the number of copies of that module to return
-
     returns:
         a ModuleList with the copies of the module (the ModuleList is itself also a module)
     """
@@ -144,7 +142,6 @@ class RNN(nn.Module):  # Implement a stacked vanilla RNN with Tanh nonlinearitie
                         shape: (seq_len, batch_size)
         - hidden: The initial hidden states for every layer of the stacked RNN.
                         shape: (num_layers, batch_size, hidden_size)
-
     Returns:
         - Logits for the softmax over output tokens at every time-step.
               **Do NOT apply softmax to the outputs!**
@@ -214,8 +211,35 @@ class RNN(nn.Module):  # Implement a stacked vanilla RNN with Tanh nonlinearitie
         - Sampled sequences of tokens
                     shape: (generated_seq_len, batch_size)
     """
+        outputs = []
 
-        return None  # samples
+        hidden_states = [None] * self.num_layers
+
+        for t in range(generated_seq_len):
+
+            embedding = self.embedding(input)
+
+            hidden_input = embedding
+
+            for i in range(self.num_layers):
+                previous_hidden_state = hidden[i]
+
+                pre_activation = self.input_to_hidden[i](hidden_input) + self.previous_to_hidden[i](
+                    previous_hidden_state)
+
+                hidden_state = nn.Tanh()(pre_activation)
+
+                hidden_input = hidden_state
+
+                
+            output = self.output(hidden_input)
+            
+            input = torch.distributions.Categorical(logits = output).sample()
+            outputs.append(input)
+            
+        samples = torch.cat(outputs).view(generated_seq_len, self.batch_size)
+
+        return samples  # samples
 
 
 # Problem 2
@@ -326,7 +350,41 @@ class GRU(nn.Module):  # Implement a stacked GRU RNN
 
     def generate(self, input, hidden, generated_seq_len):
         # TODO ========================
-        return None  # samples
+        outputs = []
+        hidden_states = [None] * self.num_layers
+
+        for t in range(generated_seq_len):
+
+            embedding = self.embedding(input)
+
+            hidden_input = embedding
+
+            for i in range(self.num_layers):
+                previous_hidden_state = hidden[i]
+
+                reset_t = nn.Sigmoid()(
+                    self.input_to_reset[i](hidden_input) + self.hidden_to_reset[i](previous_hidden_state))
+
+                update_t = nn.Sigmoid()(
+                    self.input_to_update[i](hidden_input) + self.hidden_to_update[i](previous_hidden_state))
+
+                candidate_t = nn.Tanh()(self.input_to_hidden[i](hidden_input) +
+                                        self.previous_to_hidden[i](reset_t * previous_hidden_state))
+
+                pre_activation = (1 - update_t) * previous_hidden_state + update_t * candidate_t
+
+                hidden_state = nn.Tanh()(pre_activation)
+
+                hidden_input = hidden_state
+                
+            output = self.output(hidden_input)
+            
+            input = torch.distributions.Categorical(logits = output).sample()
+            outputs.append(input)
+            
+        samples = torch.cat(outputs).view(generated_seq_len, self.batch_size)
+
+        return samples  # samples
 
 
 # Problem 3
@@ -339,25 +397,21 @@ class GRU(nn.Module):  # Implement a stacked GRU RNN
 """
 Implement the MultiHeadedAttention module of the transformer architecture.
 All other necessary modules have already been implemented for you.
-
 We're building a transfomer architecture for next-step prediction tasks, and 
 applying it to sequential language modelling. We use a binary "mask" to specify 
 which time-steps the model can use for the current prediction.
 This ensures that the model only attends to previous time-steps.
-
 The model first encodes inputs using the concatenation of a learned WordEmbedding 
 and a (in our case, hard-coded) PositionalEncoding.
 The word embedding maps a word's one-hot encoding into a dense real vector.
 The positional encoding 'tags' each element of an input sequence with a code that 
 identifies it's position (i.e. time-step).
-
 These encodings of the inputs are then transformed repeatedly using multiple
 copies of a TransformerBlock.
 This block consists of an application of MultiHeadedAttention, followed by a 
 standard MLP; the MLP applies *the same* mapping at every position.
 Both the attention and the MLP are applied with Resnet-style skip connections, 
 and layer normalization.
-
 The complete model consists of the embeddings, the stacked transformer blocks, 
 and a linear layer followed by a softmax.
 """
